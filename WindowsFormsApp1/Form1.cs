@@ -184,7 +184,7 @@ namespace SleepyWinform
         // 默认配置
         public Config()
         {
-            Host = "https://asfag654-j.hf.space";
+            Host = "https://init.space";
             Port = 443;
             device = "zmal-pc";
             deviceid = Guid.NewGuid().ToString();
@@ -208,19 +208,19 @@ namespace SleepyWinform
             List<string> configLines = new List<string>
                  {
                   "# 服务端地址",
-                  $"Host={host}",
+                  $"SERVER={host}",
                   "# 服务端端口",
                   $"Port={port}",
                   "# 显示名称",
-                  $"device={device}",
+                  $"DEVICE_SHOW_NAME={device}",
                   "# 设备id（随机生成",
                   $"deviceid={Guid.NewGuid().ToString()}",
                   "# 服务端密钥",
-                  $"secret={secret}",
+                  $"SECRET={secret}",
                   "# 黑名单列表",
-                  $"blacklists={blacklists}",
-                  "是否写入日志",
-                  $"logfile={logfile}",
+                  $"BLACKLIST={blacklists}",
+                  "#是否写入日志",
+                  $"LOG_FILE={logfile}",
                  };
 
 

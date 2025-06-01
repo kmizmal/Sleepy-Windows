@@ -159,7 +159,7 @@
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(179, 18);
             this.label5.TabIndex = 12;
-            this.label5.Text = "黑名单列表（,分隔）";
+            this.label5.Text = "黑名单列表（|分隔）";
             // 
             // blacklists_box
             // 

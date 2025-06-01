@@ -34,7 +34,7 @@ namespace SleepyWinform
             serverport_box.Text = Resconfigs.Port.ToString();
             device_textbox.Text = Resconfigs.device;
             secret_textBox.Text = Resconfigs.secret;
-            blacklists_box.Text = string.Join(",", Resconfigs.blacklists);
+            blacklists_box.Text = string.Join("|", Resconfigs.blacklists);
         }
 
         public static Config LoadConfig(string filePath)
@@ -44,7 +44,7 @@ namespace SleepyWinform
             if (!File.Exists(filePath))
             {
                 MessageBox.Show("配置文件不存在，已创建示例配置，请修改后重新加载", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                Config.SaveConfig("https://expmale.com", 443, "winform-pc", "114514", "任务切换,开始菜单",false);
+                Config.SaveConfig("https://expmale.com", 443, "winform-pc", "114514", "任务切换|开始菜单",false);
                 return config;
             }
 
@@ -53,7 +53,8 @@ namespace SleepyWinform
                 var lines = File.ReadAllLines(filePath);
                 foreach (var line in lines)
                 {
-                    var trimmedLine = line.Trim();
+                    var trimmedLine = line.Replace(" ", "");
+                    Console.WriteLine(trimmedLine);
                     if (string.IsNullOrEmpty(trimmedLine) || trimmedLine.StartsWith("#") || trimmedLine.StartsWith(";"))
                         continue;
 
@@ -65,28 +66,28 @@ namespace SleepyWinform
 
                     switch (key)
                     {
-                        case "Host":
+                        case "SERVER":
                             config.Host = value;
                             break;
                         case "Port":
                             config.Port = int.Parse(value);
                             break;
-                        case "device":
+                        case "DEVICE_SHOW_NAME":
                             config.device = value;
                             break;
                         case "deviceid":
                             config.deviceid = value;
                             break;
-                        case "secret":
+                        case "SECRET":
                             config.secret = value;
                             break;
-                        case "blacklists":
-                            config.blacklists = value.Split(',')
+                        case "BLACKLIST":
+                            config.blacklists = value.Split('|')
                                 .Select(s => s.Trim())
                                 .Where(s => !string.IsNullOrEmpty(s))
                                 .ToList();
                             break;
-                        case "logfile":
+                        case "LOG_FILE":
                             config.logfile=bool.Parse(value);
                             break;
                     }
@@ -111,7 +112,7 @@ namespace SleepyWinform
                     "已将错误配置重置为示例配置";
 
                 MessageBox.Show(message, "警告", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                Config.SaveConfig("https://expmale.com", 443, "winform-pc", "114514", "任务切换,开始菜单",false);
+                Config.SaveConfig("https://expmale.com", 443, "winform-pc", "114514", "任务切换|开始菜单",false);
                 return config;
             }
 
