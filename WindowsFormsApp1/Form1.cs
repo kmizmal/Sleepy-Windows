@@ -12,7 +12,6 @@ using System.Runtime.InteropServices;
 using System.Net.Http;
 using System.Text.Json;
 using System.IO;
-using System.Net.Sockets;
 
 namespace SleepyWinform
 {
@@ -20,8 +19,8 @@ namespace SleepyWinform
     {
         public static Config config;
         public static SleepyWinform Instance;
-        static string filePath = Path.Combine(Application.StartupPath, "config.ini");
-        static string logFile = Path.Combine(Application.StartupPath, "log.txt");
+        static readonly string filePath = Path.Combine(Application.StartupPath, "config.ini");
+        static readonly string logFile = Path.Combine(Application.StartupPath, "log.txt");
 
         public SleepyWinform()
         {
@@ -30,13 +29,10 @@ namespace SleepyWinform
 
         private void Form1_Load(object sender, EventArgs e)
         {
-
-            WriteLog($"======{DateTime.Now.ToString("HH:mm:ss")}======");
-
+            WriteLog($"======{DateTime.Now:HH:mm:ss}======");
             try
             {
                 Instance = this;
-                // 加载配置
                 config = ConfigForm.LoadConfig(filePath);
             }
             catch (Exception ex)
@@ -51,17 +47,14 @@ namespace SleepyWinform
         {
             _ = SendPostRequestAsync(config, false, "");
             WindowWatcher.Stop();
-
         }
 
-        // 配置按钮
         private void button1_Click(object sender, EventArgs e)
         {
             ConfigForm configForm = new ConfigForm();
             if (configForm.ShowDialog() == DialogResult.OK)
             {
                 config = configForm.Resconfigs;
-                // MessageBox.Show(config.secret); // 调试可打印
             }
             else
             {
@@ -71,21 +64,15 @@ namespace SleepyWinform
 
         public void AddResultToListView(string result)
         {
-            // 内部检查线程安全性
-            if (this.InvokeRequired)
+            if (InvokeRequired)
             {
-                this.Invoke((MethodInvoker)delegate
-                {
-                    AddResultToListView(result); // 递归调用直到在UI线程执行
-                });
+                Invoke((MethodInvoker)(() => AddResultToListView(result)));
                 return;
             }
 
-            // 以下是UI线程安全的操作
             ListViewItem item = new ListViewItem(DateTime.Now.ToString("HH:mm:ss"));
             item.SubItems.Add(result);
 
-            // 设置不同状态的颜色
             if (result.Contains("失败") || result.Contains("错误"))
                 item.ForeColor = Color.Red;
             else if (result.Contains("成功"))
@@ -95,22 +82,19 @@ namespace SleepyWinform
             listView1.EnsureVisible(listView1.Items.Count - 1);
         }
 
-        //发送 POST 请求
         public static async Task SendPostRequestAsync(Config cfg, bool isUsing, string appName)
         {
+            // 当appName为空时不记录日志（减少不必要日志）
+            bool skipLogging = string.IsNullOrEmpty(appName);
+
             HttpClient httpClient = new HttpClient();
 
-            Uri hostUri = new Uri(cfg.Host);
-            UriBuilder uriBuilder = new UriBuilder
+            UriBuilder uriBuilder = new UriBuilder(cfg.Host)
             {
-                Scheme = hostUri.Scheme,
-                Host = hostUri.Host,
-                Port = (hostUri.Port == -1) ? cfg.Port : hostUri.Port,
+                Port = (new Uri(cfg.Host).Port == -1) ? cfg.Port : new Uri(cfg.Host).Port,
                 Path = "/device/set"
             };
-            string url = uriBuilder.Uri.ToString();
 
-            // 构造 JSON 数据
             var data = new
             {
                 secret = cfg.secret,
@@ -119,110 +103,88 @@ namespace SleepyWinform
                 @using = isUsing,
                 app_name = appName
             };
-            string json = JsonSerializer.Serialize(data);
-            Console.WriteLine("POST URL: " + url);
-            Console.WriteLine("POST Body: " + json);
 
+            string json = JsonSerializer.Serialize(data);
             StringContent content = new StringContent(json, Encoding.UTF8, "application/json");
 
             try
             {
-                //Console.WriteLine("尝试发送请求...");
-                HttpResponseMessage response = await httpClient.PostAsync(url, content);
+                HttpResponseMessage response = await httpClient.PostAsync(uriBuilder.Uri, content).ConfigureAwait(false);
+                string result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                bool success = JsonDocument.Parse(result).RootElement.GetProperty("success").GetBoolean();
 
-                string result = await response.Content.ReadAsStringAsync();
-                //Console.WriteLine("请求结果: " + result);
-                bool resultcode = JsonDocument.Parse(result).RootElement.GetProperty("success").GetBoolean();
-                if (config != null&resultcode)
+                if (cfg != null && success && !skipLogging)
                 {
-                    WriteLog($"[{DateTime.Now.ToString("HH:mm:ss")}]-{appName}");
-                    SleepyWinform.Instance.AddResultToListView(appName);
-
+                    LogAndUIUpdate($"[{DateTime.Now:HH:mm:ss}]-{appName}", appName);
                 }
-
             }
             catch (Exception ex)
             {
-                Console.WriteLine("[请求失败] " + ex);
-                WriteLog("[请求失败] " + ex);
-                SleepyWinform.Instance.AddResultToListView($"[{appName}请求失败]-{ex}");
+                if (!skipLogging)
+                {
+                    string errorMsg = $"[{appName}请求失败]-{ex.Message}";
+                    LogAndUIUpdate($"[请求失败] {ex.Message}", errorMsg);
+                }
             }
+        }
+
+        private static void LogAndUIUpdate(string logMsg, string uiMsg)
+        {
+            WriteLog(logMsg);
+            Instance?.AddResultToListView(uiMsg);
         }
 
         public static void WriteLog(string message)
         {
-            // 判断是否开启了日志记录
+            Console.WriteLine(message);
             if (config != null && config.logfile)
             {
                 try
                 {
-                    File.AppendAllText(logFile, $"[{DateTime.Now.ToString("HH:mm:ss")}]{message}" + Environment.NewLine);
+                    File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss}]{message}{Environment.NewLine}");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("写入日志失败: " + ex.Message);
+                    Console.WriteLine($"写入日志失败: {ex.Message}");
                 }
             }
         }
-
-
     }
 
     public class Config
     {
-        public string Host { get; set; }
-        public int Port { get; set; }
-        public string device { get; set; }
-        public string deviceid { get; set; }
-        public string secret { get; set; }
+        public string Host { get; set; } = "https://init.space";
+        public int Port { get; set; } = 443;
+        public string device { get; set; } = "zmal-pc";
+        public string deviceid { get; set; } = Guid.NewGuid().ToString();
+        public string secret { get; set; } = "114514";
         public List<string> blacklists { get; set; } = new List<string>();
-        public bool logfile { get; set; }
+        public bool logfile { get; set; } = false;
+        public int updatecd { get; set; } = 3; // 最短更新间隔，单位为秒
 
-        // 文件保存路径
         public static string filePath { get; set; } = Path.Combine(Application.StartupPath, "config.ini");
 
-        // 默认配置
-        public Config()
+        public static void SaveConfig(string host, int port, string device,string deviceid, string secret, string blacklists, bool logfile,int updatecd)
         {
-            Host = "https://init.space";
-            Port = 443;
-            device = "zmal-pc";
-            deviceid = Guid.NewGuid().ToString();
-            secret = "114514";
-            blacklists = new List<string>() { };
-            logfile = false;
-        }
+            var configLines = new List<string>
+            {
+                "# 服务端地址",
+                $"SERVER={host}",
+                "# 服务端端口",
+                $"Port={port}",
+                "# 显示名称",
+                $"DEVICE_SHOW_NAME={device}",
+                "# 设备id（随机生成）",
+                $"deviceid={deviceid}",
+                "# 服务端密钥",
+                $"SECRET={secret}",
+                "# 黑名单列表",
+                $"BLACKLIST={blacklists}",
+                "#是否写入日志",
+                $"LOG_FILE={logfile}",
+                $"UPDATECD={updatecd}",
 
-        public Config(string host, int port, string device, string secret)
-        {
-            this.Host = host;
-            this.Port = port;
-            this.device = device;
-            this.secret = secret;
-            this.deviceid = Guid.NewGuid().ToString();
-            logfile = false;
-        }
-
-        public static void SaveConfig(string host, int port, string device, string secret, string blacklists,bool logfile)
-        {
-            List<string> configLines = new List<string>
-                 {
-                  "# 服务端地址",
-                  $"SERVER={host}",
-                  "# 服务端端口",
-                  $"Port={port}",
-                  "# 显示名称",
-                  $"DEVICE_SHOW_NAME={device}",
-                  "# 设备id（随机生成",
-                  $"deviceid={Guid.NewGuid().ToString()}",
-                  "# 服务端密钥",
-                  $"SECRET={secret}",
-                  "# 黑名单列表",
-                  $"BLACKLIST={blacklists}",
-                  "#是否写入日志",
-                  $"LOG_FILE={logfile}",
-                 };
-
+            };
 
             try
             {
@@ -234,26 +196,18 @@ namespace SleepyWinform
                 MessageBox.Show($"保存配置失败：{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
     }
 
     public class WindowWatcher
     {
-        private delegate void WinEventDelegate(
-            IntPtr hWinEventHook, uint eventType,
-            IntPtr hwnd, int idObject, int idChild,
-            uint dwEventThread, uint dwmsEventTime);
-
+        private delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
         private static WinEventDelegate procDelegate = new WinEventDelegate(WinEventProc);
 
         private const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
         private const uint WINEVENT_OUTOFCONTEXT = 0;
 
         [DllImport("user32.dll")]
-        private static extern IntPtr SetWinEventHook(
-            uint eventMin, uint eventMax, IntPtr hmodWinEventProc,
-            WinEventDelegate lpfnWinEventProc,
-            uint idProcess, uint idThread, uint dwFlags);
+        private static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventDelegate lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
 
         [DllImport("user32.dll")]
         private static extern bool UnhookWinEvent(IntPtr hWinEventHook);
@@ -268,8 +222,7 @@ namespace SleepyWinform
 
         public static void Start()
         {
-            _hook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND,
-                IntPtr.Zero, procDelegate, 0, 0, WINEVENT_OUTOFCONTEXT);
+            _hook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, IntPtr.Zero, procDelegate, 0, 0, WINEVENT_OUTOFCONTEXT);
         }
 
         public static void Stop()
@@ -280,41 +233,60 @@ namespace SleepyWinform
             }
         }
 
-        private static void WinEventProc(IntPtr hWinEventHook, uint eventType,
-            IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
+        private static DateTime lastUpdateTime = DateTime.MinValue;
+        private static string lastWindowTitle = string.Empty;
+
+        private static void WinEventProc(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
         {
             if (hwnd == IntPtr.Zero) return;
 
+            string windowTitle = GetWindowTitle(hwnd);
+            if (string.IsNullOrEmpty(windowTitle)) return;
+
+            // 检查时间间隔和窗口变化
+            bool isSameWindow = windowTitle.Equals(lastWindowTitle, StringComparison.OrdinalIgnoreCase);
+            bool withinCooldown = (DateTime.Now - lastUpdateTime).TotalSeconds < SleepyWinform.config.updatecd;
+
+            if (isSameWindow && withinCooldown)
+            {
+                // 相同窗口且在冷却期内，跳过更新
+                return;
+            }
+
+            // 检查黑名单
+            if (IsInBlacklist(windowTitle))
+            {
+                SleepyWinform.WriteLog($"黑名单跳过: {windowTitle}");
+                return;
+            }
+
+            // 更新状态并发送请求
+            lastWindowTitle = windowTitle;
+            lastUpdateTime = DateTime.Now;
+
+            _ = SleepyWinform.SendPostRequestAsync(SleepyWinform.config, true, windowTitle);
+        }
+
+        private static string GetWindowTitle(IntPtr hwnd)
+        {
             int length = GetWindowTextLength(hwnd);
             StringBuilder builder = new StringBuilder(length + 1);
             GetWindowText(hwnd, builder, builder.Capacity);
+            return builder.ToString();
+        }
 
-            string windowTitle = builder.ToString();
+        private static bool IsInBlacklist(string title)
+        {
+            if (SleepyWinform.config?.blacklists == null) return false;
 
-            if (!string.IsNullOrEmpty(windowTitle))
+            foreach (var blacklisted in SleepyWinform.config.blacklists)
             {
-                Console.WriteLine($"前台窗口变化: {windowTitle}");
-
-                // 黑名单判断（模糊匹配）
-                if (SleepyWinform.config != null && SleepyWinform.config.blacklists != null)
+                if (!string.IsNullOrEmpty(blacklisted) && title.IndexOf(blacklisted, StringComparison.OrdinalIgnoreCase) >= 0)
                 {
-                    foreach (string blacklisted in SleepyWinform.config.blacklists)
-                    {
-                        if (!string.IsNullOrEmpty(blacklisted) && windowTitle.IndexOf(blacklisted, StringComparison.OrdinalIgnoreCase) >= 0)
-                        {
-                            // 如果标题中包含黑名单中的关键字，跳过
-                            Console.WriteLine($"窗口 [{windowTitle}] 命中黑名单，跳过发送请求。");
-                            //SleepyWinform.Instance?.AddResultToListView($"[{windowTitle}] 已在黑名单中，已跳过。");
-                            return;
-                        }
-                    }
+                    return true;
                 }
-
-                // 如果没有命中黑名单，发送请求
-                _ = SleepyWinform.SendPostRequestAsync(SleepyWinform.config, true, windowTitle);
             }
-            
-
+            return false;
         }
     }
 }

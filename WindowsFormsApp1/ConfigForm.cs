@@ -14,6 +14,17 @@ namespace SleepyWinform
         private const string ConfigFileName = "config.ini";
         public Config Resconfigs = new Config();
 
+        // 默认配置常量
+        static string filePath = Path.Combine(Application.StartupPath, ConfigFileName);
+        private const string DefaultHost = "https://expmale.com";
+        private const int DefaultPort = 443;
+        private const string DefaultDevice = "winform-pc";
+        private static string DefaultDeviceId = Guid.NewGuid().ToString();
+        private const string DefaultSecret = "114514";
+        private const string DefaultBlacklists = "任务切换|开始菜单";
+        private const bool DefaultLogFile = false;
+        private const int DefaultUpdateCd = 3;
+
         public ConfigForm()
         {
             InitializeComponent();
@@ -26,7 +37,7 @@ namespace SleepyWinform
 
         public void initConfig()
         {
-            string filePath = Path.Combine(Application.StartupPath, ConfigFileName);
+            
             Resconfigs = LoadConfig(filePath);
 
             // 绑定配置到界面
@@ -35,118 +46,172 @@ namespace SleepyWinform
             device_textbox.Text = Resconfigs.device;
             secret_textBox.Text = Resconfigs.secret;
             blacklists_box.Text = string.Join("|", Resconfigs.blacklists);
+            logY.Checked = Resconfigs.logfile;
         }
 
         public static Config LoadConfig(string filePath)
         {
-            var config = new Config();
-
+            // 如果配置文件不存在，创建默认配置
             if (!File.Exists(filePath))
             {
-                MessageBox.Show("配置文件不存在，已创建示例配置，请修改后重新加载", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                Config.SaveConfig("https://expmale.com", 443, "winform-pc", "114514", "任务切换|开始菜单",false);
-                return config;
+                CreateDefaultConfig(filePath);
+                return new Config
+                {
+                    Host = DefaultHost,
+                    Port = DefaultPort,
+                    device = DefaultDevice,
+                    secret = DefaultSecret,
+                    blacklists = DefaultBlacklists.Split('|').ToList(),
+                    logfile = DefaultLogFile
+                };
             }
 
             try
             {
-                var lines = File.ReadAllLines(filePath);
-                foreach (var line in lines)
+                var config = ParseConfigFile(filePath);
+
+                // 配置有效性验证
+                if (IsConfigValid(config))
                 {
-                    var trimmedLine = line.Replace(" ", "");
-                    Console.WriteLine(trimmedLine);
-                    if (string.IsNullOrEmpty(trimmedLine) || trimmedLine.StartsWith("#") || trimmedLine.StartsWith(";"))
-                        continue;
-
-                    var parts = trimmedLine.Split(new[] { '=' }, 2);
-                    if (parts.Length != 2) continue;
-
-                    var key = parts[0];
-                    var value = parts[1];
-
-                    switch (key)
-                    {
-                        case "SERVER":
-                            config.Host = value;
-                            break;
-                        case "Port":
-                            config.Port = int.Parse(value);
-                            break;
-                        case "DEVICE_SHOW_NAME":
-                            config.device = value;
-                            break;
-                        case "deviceid":
-                            config.deviceid = value;
-                            break;
-                        case "SECRET":
-                            config.secret = value;
-                            break;
-                        case "BLACKLIST":
-                            config.blacklists = value.Split('|')
-                                .Select(s => s.Trim())
-                                .Where(s => !string.IsNullOrEmpty(s))
-                                .ToList();
-                            break;
-                        case "LOG_FILE":
-                            config.logfile=bool.Parse(value);
-                            break;
-                    }
+                    return config;
                 }
+
+                // 无效配置处理
+                HandleInvalidConfig(filePath, config);
+                return CreateDefaultConfigAfterInvalid();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"加载配置失败：{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return config;
+                ShowErrorMessage($"加载配置失败：{ex.Message}");
+                return CreateDefaultConfigAfterInvalid();
             }
+        }
 
-            // 校验
-            if (string.IsNullOrEmpty(config.Host) || config.Port <= 1 || config.Port >= 25565 || string.IsNullOrEmpty(config.device))
+        private static Config ParseConfigFile(string filePath)
+        {
+            var config = new Config();
+            var lines = File.ReadAllLines(filePath);
+
+            foreach (var line in lines)
             {
-                string message = "当前配置项无效，\n\n" +
-                    $"Host: {config.Host}\n" +
-                    $"Port: {config.Port}\n" +
-                    $"Device: {config.device}\n" +
-                    $"Secret: {config.secret}\n" +
-                    $"blacklists: {config.blacklists}\n" +
-                    $"日志: {config.logfile}\n" +
-                    "已将错误配置重置为示例配置";
+                if (ShouldSkipLine(line)) continue;
 
-                MessageBox.Show(message, "警告", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                Config.SaveConfig("https://expmale.com", 443, "winform-pc", "114514", "任务切换|开始菜单",false);
-                return config;
+                var (key, value) = ParseConfigLine(line);
+                if (key == null) continue;
+
+                ApplyConfigValue(config, key, value);
             }
 
             return config;
         }
 
-        // 保存配置
-        //public static void SaveConfig(string filePath, string host, int port, string device, string secret, string blacklists)
-        //{
-        //    var configLines = new List<string>
-        //    {
-        //        "# 自动生成的配置文件",
-        //        $"Host={host}",
-        //        $"Port={port}",
-        //        $"device={device}",
-        //        $"deviceid={Guid.NewGuid().ToString()}",
-        //        $"secret={secret}"
-        //    };
+        private static bool ShouldSkipLine(string line)
+        {
+            var trimmedLine = line.Trim();
+            return string.IsNullOrEmpty(trimmedLine) ||
+                   trimmedLine.StartsWith("#") ||
+                   trimmedLine.StartsWith(";");
+        }
 
-        //    if (!string.IsNullOrWhiteSpace(blacklists))
-        //    {
-        //        configLines.Add($"blacklists={blacklists}");
-        //    }
+        private static (string key, string value) ParseConfigLine(string line)
+        {
+            var parts = line.Split(new[] { '=' }, 2, StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length == 2
+                ? (parts[0].Trim(), parts[1].Trim())
+                : (null, null);
+        }
 
-        //    try
-        //    {
-        //        File.WriteAllLines(filePath, configLines);
-        //        MessageBox.Show("配置保存成功", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        MessageBox.Show($"保存配置失败：{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        //    }
-        //}
+        private static void ApplyConfigValue(Config config, string key, string value)
+        {
+            switch (key.ToUpper())
+            {
+                case "SERVER":
+                    config.Host = value;
+                    break;
+                case "PORT":
+                    if (int.TryParse(value, out int port)) config.Port = port;
+                    break;
+                case "DEVICE_SHOW_NAME":
+                    config.device = value;
+                    break;
+                case "DEVICEID":
+                    config.deviceid = value;
+                    break;
+                case "SECRET":
+                    config.secret = value;
+                    break;
+                case "BLACKLIST":
+                    config.blacklists = value.Split('|')
+                        .Select(s => s.Trim())
+                        .Where(s => !string.IsNullOrEmpty(s))
+                        .ToList();
+                    break;
+                case "LOG_FILE":
+                    if (bool.TryParse(value, out bool logFile)) config.logfile = logFile;
+                    break;
+                case "UPDATECD":
+                    if (int.TryParse(value, out int updateCd)) config.updatecd = updateCd;
+                    break;
+            }
+        }
+
+        private static bool IsConfigValid(Config config)
+        {
+            return !string.IsNullOrEmpty(config.Host) &&
+                   config.Port > 1 &&
+                   config.Port < 25565 &&
+                   !string.IsNullOrEmpty(config.device);
+        }
+
+        private static void HandleInvalidConfig(string filePath, Config config)
+        {
+            string message = "当前配置项无效：\n\n" +
+                $"Host: {config.Host}\n" +
+                $"Port: {config.Port}\n" +
+                $"Device: {config.device}\n\n" +
+                "已将配置重置为默认值";
+
+            ShowWarningMessage(message);
+            CreateDefaultConfig(filePath);
+        }
+
+        private static void CreateDefaultConfig(string filePath)
+        {
+            Config.SaveConfig(
+                DefaultHost,
+                DefaultPort,
+                DefaultDevice,
+                DefaultDeviceId,
+                DefaultSecret,
+                DefaultBlacklists,
+                DefaultLogFile,
+                DefaultUpdateCd
+            );
+        }
+
+        private static Config CreateDefaultConfigAfterInvalid()
+        {
+            return new Config
+            {
+                Host = DefaultHost,
+                Port = DefaultPort,
+                device = DefaultDevice,
+                secret = DefaultSecret,
+                blacklists = DefaultBlacklists.Split('|').ToList(),
+                logfile = DefaultLogFile,
+                updatecd = DefaultUpdateCd
+            };
+        }
+
+        private static void ShowWarningMessage(string message)
+        {
+            MessageBox.Show(message, "警告", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
+        private static void ShowErrorMessage(string message)
+        {
+            MessageBox.Show(message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
 
         private void button1_Click(object sender, EventArgs e)
         {
@@ -155,23 +220,41 @@ namespace SleepyWinform
 
         private void button2_Click(object sender, EventArgs e)
         {
-            //string filePath = Path.Combine(Application.StartupPath, ConfigFileName);
-            Config.SaveConfig(server_textbox.Text, int.Parse(serverport_box.Text), device_textbox.Text, secret_textBox.Text, blacklists_box.Text,logY.Checked);
-            this.DialogResult = DialogResult.OK;
+            try
+            {
+                int port = int.Parse(serverport_box.Text);
+                Config.SaveConfig(
+                    server_textbox.Text,
+                    port,
+                    device_textbox.Text,
+                    Resconfigs.deviceid,
+                    secret_textBox.Text,
+                    blacklists_box.Text,
+                    logY.Checked,
+                    (int)UPdatecd.Value
+                );
+                Resconfigs = LoadConfig(filePath);
+                this.DialogResult = DialogResult.OK;
+            }
+            catch (FormatException)
+            {
+                MessageBox.Show("端口号必须是有效的数字", "输入错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"保存配置失败：{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void button3_Click(object sender, EventArgs e)
         {
-            if (secret_textBox.PasswordChar == '\0')
-            {
-                secret_textBox.PasswordChar = '*';
-                button3.Text = "👁️";
-            }
-            else
-            {
-                secret_textBox.PasswordChar = '\0';
-                button3.Text = "🙈";
-            }
+            TogglePasswordVisibility();
+        }
+
+        private void TogglePasswordVisibility()
+        {
+            secret_textBox.PasswordChar = secret_textBox.PasswordChar == '\0' ? '*' : '\0';
+            button3.Text = secret_textBox.PasswordChar == '\0' ? "🙈" : "👁️";
         }
     }
 }
