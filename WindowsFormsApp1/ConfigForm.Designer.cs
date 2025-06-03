@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ConfigForm));
             this.server_textbox = new System.Windows.Forms.TextBox();
             this.serverport_box = new System.Windows.Forms.TextBox();
             this.device_textbox = new System.Windows.Forms.TextBox();
@@ -265,6 +266,7 @@
             this.Controls.Add(this.device_textbox);
             this.Controls.Add(this.serverport_box);
             this.Controls.Add(this.server_textbox);
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "ConfigForm";
             this.Text = "config";

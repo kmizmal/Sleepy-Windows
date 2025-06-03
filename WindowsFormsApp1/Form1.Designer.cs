@@ -28,11 +28,13 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SleepyWinform));
             this.configview = new System.Windows.Forms.Button();
             this.listView1 = new System.Windows.Forms.ListView();
             this.time = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.logcontent = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
             this.SuspendLayout();
             // 
             // configview
@@ -69,7 +71,14 @@
             this.logcontent.Text = "日志内容";
             this.logcontent.Width = 461;
             // 
-            // sleepy_winform
+            // notifyIcon1
+            // 
+            this.notifyIcon1.Icon = ((System.Drawing.Icon)(resources.GetObject("notifyIcon1.Icon")));
+            this.notifyIcon1.Text = "Sleepy-Winform";
+            this.notifyIcon1.Visible = true;
+            this.notifyIcon1.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.notifyIcon1_MouseDoubleClick);
+            // 
+            // SleepyWinform
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 18F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -78,11 +87,12 @@
             this.Controls.Add(this.configview);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Margin = new System.Windows.Forms.Padding(4);
-            this.Name = "sleepy_winform";
+            this.Name = "SleepyWinform";
             this.Opacity = 0.9D;
             this.Text = "sleepy_winform";
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.Form1_FormClosed);
             this.Load += new System.EventHandler(this.Form1_Load);
+            this.SizeChanged += new System.EventHandler(this.SleepyWinform_SizeChanged);
             this.ResumeLayout(false);
 
         }
@@ -92,6 +102,7 @@
         private System.Windows.Forms.ListView listView1;
         private System.Windows.Forms.ColumnHeader time;
         private System.Windows.Forms.ColumnHeader logcontent;
+        private System.Windows.Forms.NotifyIcon notifyIcon1;
     }
 }
 
