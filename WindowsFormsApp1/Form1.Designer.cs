@@ -54,9 +54,9 @@
             this.time,
             this.logcontent});
             this.listView1.HideSelection = false;
-            this.listView1.Location = new System.Drawing.Point(67, 221);
+            this.listView1.Location = new System.Drawing.Point(69, 180);
             this.listView1.Name = "listView1";
-            this.listView1.Size = new System.Drawing.Size(1062, 319);
+            this.listView1.Size = new System.Drawing.Size(1062, 358);
             this.listView1.TabIndex = 4;
             this.listView1.UseCompatibleStateImageBehavior = false;
             this.listView1.View = System.Windows.Forms.View.Details;
@@ -64,12 +64,12 @@
             // time
             // 
             this.time.Text = "时间";
-            this.time.Width = 121;
+            this.time.Width = 171;
             // 
             // logcontent
             // 
             this.logcontent.Text = "日志内容";
-            this.logcontent.Width = 461;
+            this.logcontent.Width = 559;
             // 
             // notifyIcon1
             // 
