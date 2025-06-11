@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.IO;
 using System.Linq;
+using Microsoft.Win32;
 
 namespace SleepyWinform
 {
@@ -17,10 +18,31 @@ namespace SleepyWinform
         public static Config config;
         public static SleepyWinform Instance;
         static readonly string logFile = Path.Combine(Application.StartupPath, "log.txt");
+        public static bool usingStatus = true;
 
         public SleepyWinform()
         {
             InitializeComponent();
+            SystemEvents.SessionSwitch += SystemEvents_SessionSwitch;
+            SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
+        }
+
+        private void SystemEvents_SessionSwitch(object sender, SessionSwitchEventArgs e)
+        {
+            if (e.Reason == SessionSwitchReason.SessionLock)
+            {
+                AddResultToListView("[锁屏]");
+                usingStatus = false;
+            }
+            else if (e.Reason == SessionSwitchReason.SessionUnlock){ usingStatus = true;}
+        }
+        private void SystemEvents_PowerModeChanged(object sender, PowerModeChangedEventArgs e)
+        {
+            if (e.Mode == PowerModes.Suspend)
+            {
+                AddResultToListView("[休眠]");
+                usingStatus = false;
+            }else if (e.Mode == PowerModes.Resume){usingStatus = true;}
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -42,6 +64,8 @@ namespace SleepyWinform
 
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
+            SystemEvents.SessionSwitch -= SystemEvents_SessionSwitch;
+            SystemEvents.PowerModeChanged -= SystemEvents_PowerModeChanged;
             if (config != null)
             {
                 _ = SendPostRequestAsync(config, false, "未使用");
@@ -240,7 +264,7 @@ namespace SleepyWinform
     public class WindowWatcher
     {
         private delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
-        private static WinEventDelegate procDelegate = new WinEventDelegate(WinEventProc);
+        private static readonly WinEventDelegate procDelegate = WinEventProc;
 
         private const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
         private const uint WINEVENT_OUTOFCONTEXT = 0;
@@ -302,7 +326,7 @@ namespace SleepyWinform
             lastWindowTitle = windowTitle;
             lastUpdateTime = DateTime.Now;
 
-            _ = SleepyWinform.SendPostRequestAsync(currentConfig, true, windowTitle);
+            _ = SleepyWinform.SendPostRequestAsync(currentConfig,SleepyWinform.usingStatus, windowTitle);
         }
 
         private static string GetWindowTitle(IntPtr hwnd)
