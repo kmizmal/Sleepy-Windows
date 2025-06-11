@@ -17,8 +17,9 @@ namespace SleepyWinform
     {
         public static Config config;
         public static SleepyWinform Instance;
+        static readonly HttpClient httpClient = new HttpClient();
+
         static readonly string logFile = Path.Combine(Application.StartupPath, "log.txt");
-        public static bool usingStatus = true;
 
         public SleepyWinform()
         {
@@ -31,18 +32,23 @@ namespace SleepyWinform
         {
             if (e.Reason == SessionSwitchReason.SessionLock)
             {
+                if (config != null)
+                {
+                    _ = SendPostRequestAsync(config, false, "[锁屏]");
+                }
                 AddResultToListView("[锁屏]");
-                usingStatus = false;
             }
-            else if (e.Reason == SessionSwitchReason.SessionUnlock){ usingStatus = true;}
         }
         private void SystemEvents_PowerModeChanged(object sender, PowerModeChangedEventArgs e)
         {
             if (e.Mode == PowerModes.Suspend)
             {
+                if (config != null)
+                {
+                    _ = SendPostRequestAsync(config, false, "[休眠]");
+                }
                 AddResultToListView("[休眠]");
-                usingStatus = false;
-            }else if (e.Mode == PowerModes.Resume){usingStatus = true;}
+            }
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -51,7 +57,6 @@ namespace SleepyWinform
             try
             {
                 Instance = this;
-                // 加载配置
                 config = Config.Load();
             }
             catch (Exception ex)
@@ -61,18 +66,6 @@ namespace SleepyWinform
 
             WindowWatcher.Start();
         }
-
-        private void Form1_FormClosed(object sender, FormClosedEventArgs e)
-        {
-            SystemEvents.SessionSwitch -= SystemEvents_SessionSwitch;
-            SystemEvents.PowerModeChanged -= SystemEvents_PowerModeChanged;
-            if (config != null)
-            {
-                _ = SendPostRequestAsync(config, false, "未使用");
-            }
-            WindowWatcher.Stop();
-        }
-
         private void button1_Click(object sender, EventArgs e)
         {
             ConfigForm configForm = new ConfigForm();
@@ -86,6 +79,87 @@ namespace SleepyWinform
             }
         }
 
+        private void Form1_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            SystemEvents.SessionSwitch -= SystemEvents_SessionSwitch;
+            SystemEvents.PowerModeChanged -= SystemEvents_PowerModeChanged;
+            WindowWatcher.Stop();
+
+            if (config != null)
+            {
+                try
+                {
+                    var task = SendPostRequestAsync(config, false, "未使用");
+                    task.Wait(500); // 同步等待500ms
+                }
+                catch (Exception ex)
+                {
+                    WriteLog($"关闭请求出错: {ex.Message}");
+                }
+            }
+
+        }
+
+        public static async Task SendPostRequestAsync(Config cfg, bool isUsing, string appName)
+        {
+
+            UriBuilder uriBuilder = new UriBuilder(cfg.Host)
+            {
+                Port = (new Uri(cfg.Host).Port == -1) ? cfg.Port : new Uri(cfg.Host).Port,
+                Path = "/device/set"
+            };
+
+            var data = new
+            {
+                secret = cfg.Secret,
+                id = cfg.DeviceId,
+                show_name = cfg.Device,
+                @using = isUsing,
+                app_name = appName
+            };
+
+            string json = JsonSerializer.Serialize(data);
+            StringContent content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            try
+            {
+                HttpResponseMessage response = await httpClient.PostAsync(uriBuilder.Uri, content).ConfigureAwait(false);
+                string result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                bool success = JsonDocument.Parse(result).RootElement.GetProperty("success").GetBoolean();
+
+                if (cfg != null && success)
+                {
+                    WriteLog($"[状态更新成功] using={isUsing}");
+                    Instance?.AddResultToListView(appName);
+                }
+            }
+            catch (Exception ex)
+            {
+                string errorMsg = $"[{appName}请求失败]-{ex.Message}";
+                WriteLog(errorMsg);
+                Instance?.AddResultToListView($"[请求失败] {ex.Message}");
+
+            }
+
+        }
+
+
+        public static void WriteLog(string message)
+        {
+            Console.WriteLine(message);
+
+            if (config != null && config.LogFile)
+            {
+                try
+                {
+                    File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss}]{message}{Environment.NewLine}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"写入日志失败: {ex.Message}");
+                }
+            }
+        }
         public void AddResultToListView(string result)
         {
             if (InvokeRequired)
@@ -104,81 +178,6 @@ namespace SleepyWinform
 
             listView1.Items.Add(item);
             listView1.EnsureVisible(listView1.Items.Count - 1);
-        }
-
-        public static async Task SendPostRequestAsync(Config cfg, bool isUsing, string appName)
-        {
-            bool skipLogging = string.IsNullOrEmpty(appName);
-            using (HttpClient httpClient = new HttpClient())
-            {
-                UriBuilder uriBuilder = new UriBuilder(cfg.Host)
-                {
-                    Port = (new Uri(cfg.Host).Port == -1) ? cfg.Port : new Uri(cfg.Host).Port,
-                    Path = "/device/set"
-                };
-
-                var data = new
-                {
-                    secret = cfg.Secret,
-                    id = cfg.DeviceId,
-                    show_name = cfg.Device,
-                    @using = isUsing,
-                    app_name = appName
-                };
-
-                string json = JsonSerializer.Serialize(data);
-                StringContent content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                try
-                {
-                    HttpResponseMessage response = await httpClient.PostAsync(uriBuilder.Uri, content).ConfigureAwait(false);
-                    string result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    bool success = JsonDocument.Parse(result).RootElement.GetProperty("success").GetBoolean();
-
-                    if (cfg != null && success)
-                    {
-                        if (!skipLogging)
-                        {
-                            LogAndUIUpdate($"[{DateTime.Now:HH:mm:ss}]-{appName}", appName);
-                        }
-                        else
-                        {
-                            WriteLog($"[状态更新成功] using={isUsing}");
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    string errorMsg = $"[{(skipLogging ? "状态更新" : appName)}请求失败]-{ex.Message}";
-                    WriteLog(errorMsg);
-                    if (!skipLogging)
-                    {
-                        Instance?.AddResultToListView($"[请求失败] {ex.Message}");
-                    }
-                }
-            }
-        }
-
-        private static void LogAndUIUpdate(string logMsg, string uiMsg)
-        {
-            WriteLog(logMsg);
-            Instance?.AddResultToListView(uiMsg);
-        }
-
-        public static void WriteLog(string message)
-        {
-            Console.WriteLine(message);
-            if (config != null && config.LogFile)
-            {
-                try
-                {
-                    File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss}]{message}{Environment.NewLine}");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"写入日志失败: {ex.Message}");
-                }
-            }
         }
 
         private void SleepyWinform_SizeChanged(object sender, EventArgs e)
@@ -211,7 +210,6 @@ namespace SleepyWinform
 
         public static Config Load()
         {
-            // 使用 Settings 默认值
             var settings = Properties.Settings.Default;
             if (string.IsNullOrEmpty(settings.DeviceId))
             {
@@ -326,7 +324,7 @@ namespace SleepyWinform
             lastWindowTitle = windowTitle;
             lastUpdateTime = DateTime.Now;
 
-            _ = SleepyWinform.SendPostRequestAsync(currentConfig,SleepyWinform.usingStatus, windowTitle);
+            _ = SleepyWinform.SendPostRequestAsync(currentConfig, true, windowTitle);
         }
 
         private static string GetWindowTitle(IntPtr hwnd)

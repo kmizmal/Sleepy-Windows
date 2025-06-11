@@ -18,7 +18,7 @@
       <Value Profile="(Default)">114514</Value>
     </Setting>
     <Setting Name="Blacklists" Type="System.String" Scope="User">
-      <Value Profile="(Default)">ExampleApp|PrivacyInformation|config|Win_Simple|任务切换|sleepy_winform</Value>
+      <Value Profile="(Default)">ExampleApp|PrivacyInformation|config|Win_Simple|任务切换|sleepy_winform|「开始」菜单</Value>
     </Setting>
     <Setting Name="LogFile" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
