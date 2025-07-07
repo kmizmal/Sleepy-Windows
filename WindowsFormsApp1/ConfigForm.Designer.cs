@@ -48,6 +48,8 @@
             this.UPdatecd = new System.Windows.Forms.NumericUpDown();
             this.label7 = new System.Windows.Forms.Label();
             this.label8 = new System.Windows.Forms.Label();
+            this.label9 = new System.Windows.Forms.Label();
+            this.deviceIdtxt = new System.Windows.Forms.TextBox();
             ((System.ComponentModel.ISupportInitialize)(this.UPdatecd)).BeginInit();
             this.SuspendLayout();
             // 
@@ -61,7 +63,7 @@
             // 
             // serverport_box
             // 
-            this.serverport_box.Location = new System.Drawing.Point(286, 109);
+            this.serverport_box.Location = new System.Drawing.Point(286, 85);
             this.serverport_box.Margin = new System.Windows.Forms.Padding(4);
             this.serverport_box.Name = "serverport_box";
             this.serverport_box.Size = new System.Drawing.Size(148, 28);
@@ -69,7 +71,7 @@
             // 
             // device_textbox
             // 
-            this.device_textbox.Location = new System.Drawing.Point(286, 171);
+            this.device_textbox.Location = new System.Drawing.Point(286, 147);
             this.device_textbox.Margin = new System.Windows.Forms.Padding(4);
             this.device_textbox.Name = "device_textbox";
             this.device_textbox.Size = new System.Drawing.Size(148, 28);
@@ -97,7 +99,7 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(110, 123);
+            this.label2.Location = new System.Drawing.Point(110, 99);
             this.label2.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(98, 18);
@@ -107,7 +109,7 @@
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(92, 174);
+            this.label3.Location = new System.Drawing.Point(92, 150);
             this.label3.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(116, 18);
@@ -242,11 +244,31 @@
             this.label8.TabIndex = 19;
             this.label8.Text = "s";
             // 
+            // label9
+            // 
+            this.label9.AutoSize = true;
+            this.label9.Location = new System.Drawing.Point(92, 202);
+            this.label9.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.label9.Name = "label9";
+            this.label9.Size = new System.Drawing.Size(62, 18);
+            this.label9.TabIndex = 21;
+            this.label9.Text = "设备id";
+            // 
+            // deviceIdtxt
+            // 
+            this.deviceIdtxt.Location = new System.Drawing.Point(286, 199);
+            this.deviceIdtxt.Margin = new System.Windows.Forms.Padding(4);
+            this.deviceIdtxt.Name = "deviceIdtxt";
+            this.deviceIdtxt.Size = new System.Drawing.Size(148, 28);
+            this.deviceIdtxt.TabIndex = 20;
+            // 
             // ConfigForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 18F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1200, 675);
+            this.Controls.Add(this.label9);
+            this.Controls.Add(this.deviceIdtxt);
             this.Controls.Add(this.label8);
             this.Controls.Add(this.label7);
             this.Controls.Add(this.UPdatecd);
@@ -298,5 +320,7 @@
         private System.Windows.Forms.NumericUpDown UPdatecd;
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.Label label8;
+        private System.Windows.Forms.Label label9;
+        private System.Windows.Forms.TextBox deviceIdtxt;
     }
 }

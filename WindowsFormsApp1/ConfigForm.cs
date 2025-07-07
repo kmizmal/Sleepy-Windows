@@ -22,6 +22,7 @@ namespace SleepyWinform
             server_textbox.Text = Resconfigs.Host;
             serverport_box.Text = Resconfigs.Port.ToString();
             device_textbox.Text = Resconfigs.Device;
+            deviceIdtxt.Text= Resconfigs.DeviceId;
             secret_textBox.Text = Resconfigs.Secret;
             // 设置密码隐藏
             secret_textBox.PasswordChar = '*';
@@ -58,7 +59,7 @@ namespace SleepyWinform
                     Host = server_textbox.Text,
                     Port = port,
                     Device = device_textbox.Text,
-                    DeviceId = Resconfigs.DeviceId,
+                    DeviceId = deviceIdtxt.Text,
                     Secret = secret_textBox.Text,
                     Blacklists = blacklists_box.Text.Split('|')
                         .Select(s => s.Trim())
