@@ -118,5 +118,17 @@ namespace SleepyWinform.Properties {
                 this["UpdateCd"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool ServerNode {
+            get {
+                return ((bool)(this["ServerNode"]));
+            }
+            set {
+                this["ServerNode"] = value;
+            }
+        }
     }
 }

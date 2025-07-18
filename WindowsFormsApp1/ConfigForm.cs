@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Data;
-using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -18,18 +17,16 @@ namespace SleepyWinform
         private void config_Load(object sender, EventArgs e)
         {
             Resconfigs = Config.Load();
-
             server_textbox.Text = Resconfigs.Host;
             serverport_box.Text = Resconfigs.Port.ToString();
             device_textbox.Text = Resconfigs.Device;
-            deviceIdtxt.Text= Resconfigs.DeviceId;
+            deviceIdtxt.Text = Resconfigs.DeviceId;
             secret_textBox.Text = Resconfigs.Secret;
-            // 设置密码隐藏
             secret_textBox.PasswordChar = '*';
             button3.Text = "👁️";
-
             blacklists_box.Text = string.Join("|", Resconfigs.Blacklists);
             logY.Checked = Resconfigs.LogFile;
+            servernode.Checked = Resconfigs.ServerNode;
             UPdatecd.Value = Resconfigs.UpdateCd;
         }
 
@@ -39,13 +36,14 @@ namespace SleepyWinform
             server_textbox.Text = Resconfigs.Host;
             serverport_box.Text = Resconfigs.Port.ToString();
             device_textbox.Text = Resconfigs.Device;
+            deviceIdtxt.Text = Resconfigs.DeviceId;
             secret_textBox.Text = Resconfigs.Secret;
             // 保持密码隐藏状态
             secret_textBox.PasswordChar = '*';
             button3.Text = "👁️";
-
             blacklists_box.Text = string.Join("|", Resconfigs.Blacklists);
             logY.Checked = Resconfigs.LogFile;
+            servernode.Checked = Resconfigs.ServerNode;
             UPdatecd.Value = Resconfigs.UpdateCd;
         }
 
@@ -66,9 +64,9 @@ namespace SleepyWinform
                         .Where(s => !string.IsNullOrEmpty(s))
                         .ToList(),
                     LogFile = logY.Checked,
+                    ServerNode = servernode.Checked,
                     UpdateCd = (int)UPdatecd.Value
                 };
-
                 Config.Save(Resconfigs);
                 this.DialogResult = DialogResult.OK;
             }

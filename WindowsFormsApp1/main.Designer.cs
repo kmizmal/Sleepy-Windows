@@ -39,10 +39,10 @@
             // 
             // configview
             // 
-            this.configview.Location = new System.Drawing.Point(995, 58);
-            this.configview.Margin = new System.Windows.Forms.Padding(4);
+            this.configview.Location = new System.Drawing.Point(1216, 68);
+            this.configview.Margin = new System.Windows.Forms.Padding(5);
             this.configview.Name = "configview";
-            this.configview.Size = new System.Drawing.Size(112, 34);
+            this.configview.Size = new System.Drawing.Size(137, 40);
             this.configview.TabIndex = 1;
             this.configview.Text = "配置";
             this.configview.UseVisualStyleBackColor = true;
@@ -54,9 +54,10 @@
             this.time,
             this.logcontent});
             this.listView1.HideSelection = false;
-            this.listView1.Location = new System.Drawing.Point(69, 180);
+            this.listView1.Location = new System.Drawing.Point(84, 210);
+            this.listView1.Margin = new System.Windows.Forms.Padding(4);
             this.listView1.Name = "listView1";
-            this.listView1.Size = new System.Drawing.Size(1062, 358);
+            this.listView1.Size = new System.Drawing.Size(1297, 417);
             this.listView1.TabIndex = 4;
             this.listView1.UseCompatibleStateImageBehavior = false;
             this.listView1.View = System.Windows.Forms.View.Details;
@@ -80,13 +81,13 @@
             // 
             // SleepyWinform
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 18F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(11F, 21F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1200, 675);
+            this.ClientSize = new System.Drawing.Size(1467, 788);
             this.Controls.Add(this.listView1);
             this.Controls.Add(this.configview);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-            this.Margin = new System.Windows.Forms.Padding(4);
+            this.Margin = new System.Windows.Forms.Padding(5);
             this.Name = "SleepyWinform";
             this.Opacity = 0.9D;
             this.Text = "sleepy_winform";

@@ -54,6 +54,7 @@ namespace SleepyWinform
         private void Form1_Load(object sender, EventArgs e)
         {
             WriteLog($"======{DateTime.Now:HH:mm:ss}======");
+            this.WindowState = FormWindowState.Minimized;
             try
             {
                 Instance = this;
@@ -106,7 +107,7 @@ namespace SleepyWinform
             UriBuilder uriBuilder = new UriBuilder(cfg.Host)
             {
                 Port = (new Uri(cfg.Host).Port == -1) ? cfg.Port : new Uri(cfg.Host).Port,
-                Path = "/device/set"
+                Path = cfg.ServerNode ? "/api/status" : "/device/set"
             };
 
             var data = new
@@ -137,12 +138,10 @@ namespace SleepyWinform
             {
                 string errorMsg = $"[{appName}请求失败]-{ex.Message}";
                 WriteLog(errorMsg);
-                Instance?.AddResultToListView($"[请求失败] {ex.Message}");
-
+                Instance?.AddResultToListView(errorMsg);
             }
 
         }
-
 
         public static void WriteLog(string message)
         {
@@ -207,6 +206,7 @@ namespace SleepyWinform
         public List<string> Blacklists { get; set; }
         public bool LogFile { get; set; }
         public int UpdateCd { get; set; }
+        public bool ServerNode { get; internal set; }
 
         public static Config Load()
         {
@@ -231,7 +231,8 @@ namespace SleepyWinform
                 Secret = settings.Secret,
                 Blacklists = blacklists,
                 LogFile = settings.LogFile,
-                UpdateCd = settings.UpdateCd
+                UpdateCd = settings.UpdateCd,
+                ServerNode = settings.ServerNode
             };
         }
 
@@ -246,6 +247,7 @@ namespace SleepyWinform
             settings.Blacklists = string.Join("|", config.Blacklists);
             settings.LogFile = config.LogFile;
             settings.UpdateCd = config.UpdateCd;
+            settings.ServerNode = config.ServerNode;
 
             try
             {
